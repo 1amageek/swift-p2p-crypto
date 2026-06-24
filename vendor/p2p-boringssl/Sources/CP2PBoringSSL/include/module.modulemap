@@ -1,0 +1,4 @@
+module CP2PBoringSSL {
+    header "CCryptoBoringSSL.h"
+    export *
+}

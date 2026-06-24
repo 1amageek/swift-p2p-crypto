@@ -5,7 +5,7 @@
 // on a bad tag (no silent fallback). Verified to seal/open/auth-fail under
 // Embedded (crypto-impl.md §9).
 import P2PCoreCrypto
-import CCryptoBoringSSL
+import CP2PBoringSSL
 
 /// One keyed AEAD over `EVP_AEAD_CTX`. Conforms `P2PCoreCrypto.AEAD`.
 ///
@@ -43,13 +43,13 @@ public final class BoringAEAD: AEAD, @unchecked Sendable {
         }
         // Inferred type — EVP_AEAD is not nameable as a bare typedef (§1.4.3).
         let aead = switch algorithm {
-        case .aes128gcm:        CCryptoBoringSSL_EVP_aead_aes_128_gcm()
-        case .aes256gcm:        CCryptoBoringSSL_EVP_aead_aes_256_gcm()
-        case .chacha20poly1305: CCryptoBoringSSL_EVP_aead_chacha20_poly1305()
+        case .aes128gcm:        CP2PBoringSSL_EVP_aead_aes_128_gcm()
+        case .aes256gcm:        CP2PBoringSSL_EVP_aead_aes_256_gcm()
+        case .chacha20poly1305: CP2PBoringSSL_EVP_aead_chacha20_poly1305()
         }
         let keyBytes = SecretBytes(key.toArray())
         let created: UnsafeMutablePointer<EVP_AEAD_CTX>? = keyBytes.bytes.withUnsafeBufferPointer { kp in
-            CCryptoBoringSSL_EVP_AEAD_CTX_new(aead, kp.baseAddress, kp.count, Self.tagLength)
+            CP2PBoringSSL_EVP_AEAD_CTX_new(aead, kp.baseAddress, kp.count, Self.tagLength)
         }
         guard let created else { throw .providerFailure }
         ctx = created
@@ -57,7 +57,7 @@ public final class BoringAEAD: AEAD, @unchecked Sendable {
     }
 
     deinit {
-        CCryptoBoringSSL_EVP_AEAD_CTX_free(ctx)
+        CP2PBoringSSL_EVP_AEAD_CTX_free(ctx)
     }
 
     public func seal(
@@ -78,7 +78,7 @@ public final class BoringAEAD: AEAD, @unchecked Sendable {
             nonceBytes.withUnsafeBufferPointer { np in
                 plaintextBytes.withUnsafeBufferPointer { pp in
                     aadBytes.withUnsafeBufferPointer { ap in
-                        CCryptoBoringSSL_EVP_AEAD_CTX_seal(
+                        CP2PBoringSSL_EVP_AEAD_CTX_seal(
                             ctx, op.baseAddress, &outLen, maxOut,
                             np.baseAddress, np.count,
                             pp.baseAddress, pp.count,
@@ -113,7 +113,7 @@ public final class BoringAEAD: AEAD, @unchecked Sendable {
             nonceBytes.withUnsafeBufferPointer { np in
                 ciphertextBytes.withUnsafeBufferPointer { cp in
                     aadBytes.withUnsafeBufferPointer { ap in
-                        CCryptoBoringSSL_EVP_AEAD_CTX_open(
+                        CP2PBoringSSL_EVP_AEAD_CTX_open(
                             ctx, op.baseAddress, &outLen, maxOut,
                             np.baseAddress, np.count,
                             cp.baseAddress, cp.count,

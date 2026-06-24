@@ -2,8 +2,8 @@
 // X25519 ECDH over BoringSSL X25519 shims (crypto-impl.md §2.5). Raw 32-byte
 // little-endian key encodings map directly to the seam's rawRepresentation.
 import P2PCoreCrypto
-import CCryptoBoringSSL
-import CCryptoBoringSSLShims
+import CP2PBoringSSL
+import CP2PBoringSSLShims
 
 /// X25519 key agreement. Conforms `P2PCoreCrypto.KeyAgreement`.
 public enum BoringX25519: KeyAgreement {
@@ -25,7 +25,7 @@ public enum BoringX25519: KeyAgreement {
         var pub = [UInt8](repeating: 0, count: keyLength)
         pub.withUnsafeMutableBufferPointer { pubp in
             priv.withUnsafeMutableBufferPointer { privp in
-                CCryptoBoringSSLShims_X25519_keypair(pubp.baseAddress!, privp.baseAddress!)
+                CP2PBoringSSLShims_X25519_keypair(pubp.baseAddress!, privp.baseAddress!)
             }
         }
         return PrivateKey(priv)
@@ -49,7 +49,7 @@ public enum BoringX25519: KeyAgreement {
         var pub = [UInt8](repeating: 0, count: keyLength)
         pub.withUnsafeMutableBufferPointer { pubp in
             privateKey.secret.bytes.withUnsafeBufferPointer { privp in
-                CCryptoBoringSSLShims_X25519_public_from_private(pubp.baseAddress!, privp.baseAddress!)
+                CP2PBoringSSLShims_X25519_public_from_private(pubp.baseAddress!, privp.baseAddress!)
             }
         }
         return PublicKey(bytes: pub)
@@ -71,7 +71,7 @@ public enum BoringX25519: KeyAgreement {
         let ok = shared.withUnsafeMutableBufferPointer { sp in
             privateKey.secret.bytes.withUnsafeBufferPointer { dp in
                 peerPublicKey.bytes.withUnsafeBufferPointer { pp in
-                    CCryptoBoringSSLShims_X25519(sp.baseAddress!, dp.baseAddress!, pp.baseAddress!)
+                    CP2PBoringSSLShims_X25519(sp.baseAddress!, dp.baseAddress!, pp.baseAddress!)
                 }
             }
         }

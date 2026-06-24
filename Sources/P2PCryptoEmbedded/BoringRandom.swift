@@ -2,7 +2,7 @@
 // CSPRNG over BoringSSL RAND_bytes (crypto-impl.md §2.9). Replaces Foundation's
 // SystemRandomNumberGenerator / SymmetricKey(size:) idiom.
 import P2PCoreCrypto
-import CCryptoBoringSSL
+import CP2PBoringSSL
 
 /// CSPRNG. Conforms `P2PCoreCrypto.RandomSource`.
 public struct BoringRandom: RandomSource {
@@ -12,7 +12,7 @@ public struct BoringRandom: RandomSource {
         var out = [UInt8](repeating: 0, count: count)
         if count > 0 {
             out.withUnsafeMutableBufferPointer { op in
-                _ = CCryptoBoringSSL_RAND_bytes(op.baseAddress, op.count)
+                _ = CP2PBoringSSL_RAND_bytes(op.baseAddress, op.count)
             }
         }
         return out
@@ -21,7 +21,7 @@ public struct BoringRandom: RandomSource {
     public func fill(_ buffer: inout [UInt8]) {
         if buffer.isEmpty { return }
         buffer.withUnsafeMutableBufferPointer { bp in
-            _ = CCryptoBoringSSL_RAND_bytes(bp.baseAddress, bp.count)
+            _ = CP2PBoringSSL_RAND_bytes(bp.baseAddress, bp.count)
         }
     }
 }

@@ -5,8 +5,8 @@
 // keys are X9.62 uncompressed points (65 B P-256 / 97 B P-384), matching
 // CryptoKit's x963Representation for cross-provider equivalence.
 import P2PCoreCrypto
-import CCryptoBoringSSL
-import CCryptoBoringSSLShims
+import CP2PBoringSSL
+import CP2PBoringSSLShims
 
 /// Parameters identifying a NIST prime curve.
 struct ECCurve: Sendable {
@@ -25,21 +25,21 @@ final class ManagedECKey {
 
     init(key: OpaquePointer) { self.key = key }
 
-    deinit { CCryptoBoringSSL_EC_KEY_free(key) }
+    deinit { CP2PBoringSSL_EC_KEY_free(key) }
 }
 
 enum ECCore {
     /// Generates a fresh key pair and returns the raw private scalar
     /// (big-endian, fixed `scalarLength`).
     static func generateScalar(_ curve: ECCurve) throws(CryptoError) -> [UInt8] {
-        guard let key = CCryptoBoringSSL_EC_KEY_new_by_curve_name(curve.nid) else {
+        guard let key = CP2PBoringSSL_EC_KEY_new_by_curve_name(curve.nid) else {
             throw .providerFailure
         }
         let managed = ManagedECKey(key: key)
-        guard CCryptoBoringSSL_EC_KEY_generate_key(managed.key) == 1 else {
+        guard CP2PBoringSSL_EC_KEY_generate_key(managed.key) == 1 else {
             throw .providerFailure
         }
-        guard let bn = CCryptoBoringSSL_EC_KEY_get0_private_key(managed.key) else {
+        guard let bn = CP2PBoringSSL_EC_KEY_get0_private_key(managed.key) else {
             throw .providerFailure
         }
         return try scalarToBytes(bn, length: curve.scalarLength)
@@ -47,18 +47,18 @@ enum ECCore {
 
     /// Derives the X9.62 uncompressed public point for a raw private scalar.
     static func publicPoint(_ curve: ECCurve, scalar: borrowing [UInt8]) throws(CryptoError) -> [UInt8] {
-        guard let group = CCryptoBoringSSL_EC_GROUP_new_by_curve_name(curve.nid) else {
+        guard let group = CP2PBoringSSL_EC_GROUP_new_by_curve_name(curve.nid) else {
             throw .providerFailure
         }
-        defer { CCryptoBoringSSL_EC_GROUP_free(group) }
+        defer { CP2PBoringSSL_EC_GROUP_free(group) }
         guard let bn = scalar.withUnsafeBufferPointer({ bp in
-            CCryptoBoringSSLShims_BN_bin2bn(bp.baseAddress, bp.count, nil)
+            CP2PBoringSSLShims_BN_bin2bn(bp.baseAddress, bp.count, nil)
         }) else { throw .providerFailure }
-        defer { CCryptoBoringSSL_BN_free(bn) }
-        guard let point = CCryptoBoringSSL_EC_POINT_new(group) else { throw .providerFailure }
-        defer { CCryptoBoringSSL_EC_POINT_free(point) }
+        defer { CP2PBoringSSL_BN_free(bn) }
+        guard let point = CP2PBoringSSL_EC_POINT_new(group) else { throw .providerFailure }
+        defer { CP2PBoringSSL_EC_POINT_free(point) }
         // point = generator * scalar
-        guard CCryptoBoringSSL_EC_POINT_mul(group, point, bn, nil, nil, nil) == 1 else {
+        guard CP2PBoringSSL_EC_POINT_mul(group, point, bn, nil, nil, nil) == 1 else {
             throw .providerFailure
         }
         return try encodePoint(group: group, point: point, length: curve.uncompressedLength)
@@ -69,14 +69,14 @@ enum ECCore {
         guard uncompressed.count == curve.uncompressedLength else {
             throw .invalidLength(expected: curve.uncompressedLength, actual: uncompressed.count)
         }
-        guard let group = CCryptoBoringSSL_EC_GROUP_new_by_curve_name(curve.nid) else {
+        guard let group = CP2PBoringSSL_EC_GROUP_new_by_curve_name(curve.nid) else {
             throw .providerFailure
         }
-        defer { CCryptoBoringSSL_EC_GROUP_free(group) }
-        guard let point = CCryptoBoringSSL_EC_POINT_new(group) else { throw .providerFailure }
-        defer { CCryptoBoringSSL_EC_POINT_free(point) }
+        defer { CP2PBoringSSL_EC_GROUP_free(group) }
+        guard let point = CP2PBoringSSL_EC_POINT_new(group) else { throw .providerFailure }
+        defer { CP2PBoringSSL_EC_POINT_free(point) }
         let parsed = uncompressed.withUnsafeBufferPointer { pp in
-            CCryptoBoringSSL_EC_POINT_oct2point(group, point, pp.baseAddress, pp.count, nil)
+            CP2PBoringSSL_EC_POINT_oct2point(group, point, pp.baseAddress, pp.count, nil)
         }
         // oct2point rejects off-curve points.
         guard parsed == 1 else { throw .keyAgreementFailure }
@@ -89,33 +89,33 @@ enum ECCore {
         scalar: borrowing [UInt8],
         peerUncompressed: borrowing [UInt8]
     ) throws(CryptoError) -> [UInt8] {
-        guard let group = CCryptoBoringSSL_EC_GROUP_new_by_curve_name(curve.nid) else {
+        guard let group = CP2PBoringSSL_EC_GROUP_new_by_curve_name(curve.nid) else {
             throw .providerFailure
         }
-        defer { CCryptoBoringSSL_EC_GROUP_free(group) }
+        defer { CP2PBoringSSL_EC_GROUP_free(group) }
 
-        guard let key = CCryptoBoringSSL_EC_KEY_new_by_curve_name(curve.nid) else {
+        guard let key = CP2PBoringSSL_EC_KEY_new_by_curve_name(curve.nid) else {
             throw .providerFailure
         }
         let managed = ManagedECKey(key: key)
         guard let bn = scalar.withUnsafeBufferPointer({ bp in
-            CCryptoBoringSSLShims_BN_bin2bn(bp.baseAddress, bp.count, nil)
+            CP2PBoringSSLShims_BN_bin2bn(bp.baseAddress, bp.count, nil)
         }) else { throw .keyAgreementFailure }
-        defer { CCryptoBoringSSL_BN_free(bn) }
-        guard CCryptoBoringSSL_EC_KEY_set_private_key(managed.key, bn) == 1 else {
+        defer { CP2PBoringSSL_BN_free(bn) }
+        guard CP2PBoringSSL_EC_KEY_set_private_key(managed.key, bn) == 1 else {
             throw .keyAgreementFailure
         }
 
-        guard let peer = CCryptoBoringSSL_EC_POINT_new(group) else { throw .providerFailure }
-        defer { CCryptoBoringSSL_EC_POINT_free(peer) }
+        guard let peer = CP2PBoringSSL_EC_POINT_new(group) else { throw .providerFailure }
+        defer { CP2PBoringSSL_EC_POINT_free(peer) }
         let parsed = peerUncompressed.withUnsafeBufferPointer { pp in
-            CCryptoBoringSSL_EC_POINT_oct2point(group, peer, pp.baseAddress, pp.count, nil)
+            CP2PBoringSSL_EC_POINT_oct2point(group, peer, pp.baseAddress, pp.count, nil)
         }
         guard parsed == 1 else { throw .keyAgreementFailure }
 
         var shared = [UInt8](repeating: 0, count: curve.scalarLength)
         let written = shared.withUnsafeMutableBufferPointer { sp in
-            CCryptoBoringSSL_ECDH_compute_key(sp.baseAddress, curve.scalarLength, peer, managed.key, nil)
+            CP2PBoringSSL_ECDH_compute_key(sp.baseAddress, curve.scalarLength, peer, managed.key, nil)
         }
         guard written == curve.scalarLength else { throw .keyAgreementFailure }
         return shared
@@ -129,7 +129,7 @@ enum ECCore {
     static func scalarToBytes(_ bn: UnsafePointer<BIGNUM>, length: Int) throws(CryptoError) -> [UInt8] {
         var out = [UInt8](repeating: 0, count: length)
         let ok = out.withUnsafeMutableBufferPointer { op in
-            CCryptoBoringSSL_BN_bn2bin_padded(op.baseAddress, length, bn)
+            CP2PBoringSSL_BN_bn2bin_padded(op.baseAddress, length, bn)
         }
         guard ok == 1 else { throw .providerFailure }
         return out
@@ -138,7 +138,7 @@ enum ECCore {
     static func encodePoint(group: OpaquePointer, point: OpaquePointer, length: Int) throws(CryptoError) -> [UInt8] {
         var out = [UInt8](repeating: 0, count: length)
         let written = out.withUnsafeMutableBufferPointer { op in
-            CCryptoBoringSSL_EC_POINT_point2oct(
+            CP2PBoringSSL_EC_POINT_point2oct(
                 group, point, POINT_CONVERSION_UNCOMPRESSED, op.baseAddress, length, nil)
         }
         guard written == length else { throw .providerFailure }

@@ -34,14 +34,20 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../swift-p2p-core"),
-        // A single vendored swift-crypto checkout (BoringSSL commit
-        // 0226f30467f540a3f62ef48d453f93927da199b6) serves BOTH providers:
-        //   - the C BoringSSL targets (CBoringSSLForProbe) for the Embedded provider,
-        //   - the high-level Crypto / _CryptoExtras for the host provider.
-        // Using one checkout avoids the cross-package C-target name collision that
-        // two separate swift-crypto packages would cause. Only the manifest differs
-        // from the spike; no BoringSSL/Swift source is modified.
-        .package(path: "vendor/swift-crypto"),
+        // Vendored BoringSSL with a DISTINCT identity (`p2p-boringssl`) and
+        // renamed C targets (`CP2PBoringSSL` / `CP2PBoringSSLShims`, link symbols
+        // prefixed `CP2PBoringSSL_*`). Used ONLY by the Embedded provider for its
+        // C BoringSSL bindings (CBoringSSLForProbe). Its distinct identity and
+        // symbol prefix let it coexist with `apple/swift-crypto` in any consumer
+        // graph (no `swift-crypto` identity collision, no duplicate C symbols).
+        .package(path: "vendor/p2p-boringssl"),
+        // The host Foundation provider sources its high-level `Crypto` from the
+        // canonical `apple/swift-crypto` (CryptoKit on Apple). This is the SAME
+        // `swift-crypto` identity that swift-p2p-core / swift-certificates use, so
+        // a consumer pulling both swift-p2p-crypto and swift-certificates sees one
+        // coherent `swift-crypto` and the platform floor is whatever the consumer
+        // graph resolves (no forced `.macOS(.v26)`).
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0"),
     ],
     targets: [
         // ---- Umbrella: the single `DefaultCryptoProvider` resolution point ----
@@ -62,7 +68,7 @@ let package = Package(
             dependencies: [
                 .product(name: "P2PCoreCrypto",       package: "swift-p2p-core"),
                 .product(name: "P2PCoreBytes",        package: "swift-p2p-core"),
-                .product(name: "CBoringSSLForProbe",  package: "swift-crypto"),
+                .product(name: "CBoringSSLForProbe",  package: "p2p-boringssl"),
             ],
             swiftSettings: embeddedSettings,
             // BoringSSL is C++ (.cc): the final embedder/host link pulls in the C++

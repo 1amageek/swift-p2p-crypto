@@ -4,7 +4,7 @@
 // ChaCha path = RFC-8439 block via CRYPTO_chacha_20. Both return the first 5
 // keystream/cipher bytes as the mask. No _CryptoExtras, no CBC-IV-0 hack.
 import P2PCoreCrypto
-import CCryptoBoringSSL
+import CP2PBoringSSL
 
 /// QUIC header protection. Conforms `P2PCoreCrypto.HeaderProtectionProvider`.
 public enum BoringHeaderProtection: HeaderProtectionProvider {
@@ -20,13 +20,13 @@ public enum BoringHeaderProtection: HeaderProtectionProvider {
         var aeskey = AES_KEY()
         let bits = UInt32(keyBytes.count * 8)
         let rc = keyBytes.withUnsafeBufferPointer { kp in
-            CCryptoBoringSSL_AES_set_encrypt_key(kp.baseAddress, bits, &aeskey)
+            CP2PBoringSSL_AES_set_encrypt_key(kp.baseAddress, bits, &aeskey)
         }
         guard rc == 0 else { throw .providerFailure }
         var out = [UInt8](repeating: 0, count: 16)
         sampleBytes.withUnsafeBufferPointer { sp in
             out.withUnsafeMutableBufferPointer { op in
-                CCryptoBoringSSL_AES_encrypt(sp.baseAddress, op.baseAddress, &aeskey)
+                CP2PBoringSSL_AES_encrypt(sp.baseAddress, op.baseAddress, &aeskey)
             }
         }
         return Array(out[0..<5])
@@ -53,7 +53,7 @@ public enum BoringHeaderProtection: HeaderProtectionProvider {
             zeros.withUnsafeBufferPointer { zp in
                 keyBytes.withUnsafeBufferPointer { kp in
                     nonce.withUnsafeBufferPointer { np in
-                        CCryptoBoringSSL_CRYPTO_chacha_20(
+                        CP2PBoringSSL_CRYPTO_chacha_20(
                             op.baseAddress, zp.baseAddress, 5,
                             kp.baseAddress, np.baseAddress, counter)
                     }

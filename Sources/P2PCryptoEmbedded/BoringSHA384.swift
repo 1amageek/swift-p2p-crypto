@@ -2,7 +2,7 @@
 // SHA-384 over BoringSSL SHA384_Init/Update/Final (uses SHA512_CTX).
 // crypto-impl.md §2.2.
 import P2PCoreCrypto
-import CCryptoBoringSSL
+import CP2PBoringSSL
 
 /// SHA-384. Conforms `P2PCoreCrypto.HashFunction`.
 public struct BoringSHA384: HashFunction {
@@ -12,20 +12,20 @@ public struct BoringSHA384: HashFunction {
     private var ctx = SHA512_CTX()
 
     public init() {
-        _ = CCryptoBoringSSL_SHA384_Init(&ctx)
+        _ = CP2PBoringSSL_SHA384_Init(&ctx)
     }
 
     public mutating func update(_ data: Span<UInt8>) {
         let bytes = data.toArray()
         bytes.withUnsafeBufferPointer { bp in
-            _ = CCryptoBoringSSL_SHA384_Update(&ctx, bp.baseAddress, bp.count)
+            _ = CP2PBoringSSL_SHA384_Update(&ctx, bp.baseAddress, bp.count)
         }
     }
 
     public consuming func finalize() -> [UInt8] {
         var out = [UInt8](repeating: 0, count: Self.digestLength)
         out.withUnsafeMutableBufferPointer { op in
-            _ = CCryptoBoringSSL_SHA384_Final(op.baseAddress, &ctx)
+            _ = CP2PBoringSSL_SHA384_Final(op.baseAddress, &ctx)
         }
         return out
     }

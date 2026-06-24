@@ -4,8 +4,8 @@
 // store a 32-byte seed, so signingKey(rawRepresentation:) expands it and
 // rawRepresentation(of:) returns the seed back.
 import P2PCoreCrypto
-import CCryptoBoringSSL
-import CCryptoBoringSSLShims
+import CP2PBoringSSL
+import CP2PBoringSSLShims
 
 /// Ed25519 signatures. Conforms `P2PCoreCrypto.SignatureScheme`.
 public enum BoringEd25519: SignatureScheme {
@@ -30,7 +30,7 @@ public enum BoringEd25519: SignatureScheme {
         var priv = [UInt8](repeating: 0, count: expandedLength)
         pub.withUnsafeMutableBufferPointer { pp in
             priv.withUnsafeMutableBufferPointer { sp in
-                CCryptoBoringSSLShims_ED25519_keypair(pp.baseAddress!, sp.baseAddress!)
+                CP2PBoringSSLShims_ED25519_keypair(pp.baseAddress!, sp.baseAddress!)
             }
         }
         return SigningKey(priv)
@@ -46,7 +46,7 @@ public enum BoringEd25519: SignatureScheme {
         pub.withUnsafeMutableBufferPointer { pp in
             priv.withUnsafeMutableBufferPointer { sp in
                 seed.withUnsafeBufferPointer { dp in
-                    CCryptoBoringSSLShims_ED25519_keypair_from_seed(pp.baseAddress!, sp.baseAddress!, dp.baseAddress!)
+                    CP2PBoringSSLShims_ED25519_keypair_from_seed(pp.baseAddress!, sp.baseAddress!, dp.baseAddress!)
                 }
             }
         }
@@ -81,7 +81,7 @@ public enum BoringEd25519: SignatureScheme {
         let ok = sig.withUnsafeMutableBufferPointer { sp in
             messageBytes.withUnsafeBufferPointer { mp in
                 signingKey.expanded.bytes.withUnsafeBufferPointer { kp in
-                    CCryptoBoringSSLShims_ED25519_sign(sp.baseAddress!, mp.baseAddress, mp.count, kp.baseAddress!)
+                    CP2PBoringSSLShims_ED25519_sign(sp.baseAddress!, mp.baseAddress, mp.count, kp.baseAddress!)
                 }
             }
         }
@@ -100,7 +100,7 @@ public enum BoringEd25519: SignatureScheme {
         let ok = messageBytes.withUnsafeBufferPointer { mp in
             signatureBytes.withUnsafeBufferPointer { sp in
                 verifyingKey.publicKey.withUnsafeBufferPointer { kp in
-                    CCryptoBoringSSLShims_ED25519_verify(mp.baseAddress, mp.count, sp.baseAddress!, kp.baseAddress!)
+                    CP2PBoringSSLShims_ED25519_verify(mp.baseAddress, mp.count, sp.baseAddress!, kp.baseAddress!)
                 }
             }
         }

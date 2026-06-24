@@ -7,7 +7,7 @@
 // The EVP_MD selector (EVP_sha1/256/384) return type is not nameable as a bare
 // typedef (crypto-impl.md §1.4.3); each MAC type passes the live selector result
 // in via the `md` closure so its type is inferred, never annotated.
-import CCryptoBoringSSL
+import CP2PBoringSSL
 
 /// Identifies which BoringSSL digest backs an HMAC.
 enum HMACDigest {
@@ -33,16 +33,16 @@ enum BoringHMACCore {
     ) -> [UInt8] {
         // Selector result type inferred (§1.4.3).
         let md = switch digest {
-        case .sha1:   CCryptoBoringSSL_EVP_sha1()
-        case .sha256: CCryptoBoringSSL_EVP_sha256()
-        case .sha384: CCryptoBoringSSL_EVP_sha384()
+        case .sha1:   CP2PBoringSSL_EVP_sha1()
+        case .sha256: CP2PBoringSSL_EVP_sha256()
+        case .sha384: CP2PBoringSSL_EVP_sha384()
         }
         var out = [UInt8](repeating: 0, count: digest.digestLength)
         var outLen: UInt32 = 0
         _ = key.withUnsafeBufferPointer { kp in
             message.withUnsafeBufferPointer { mp in
                 out.withUnsafeMutableBufferPointer { op in
-                    CCryptoBoringSSL_HMAC(
+                    CP2PBoringSSL_HMAC(
                         md, kp.baseAddress, kp.count,
                         mp.baseAddress, mp.count,
                         op.baseAddress, &outLen)

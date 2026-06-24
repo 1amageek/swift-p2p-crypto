@@ -3,7 +3,7 @@
 // OPENSSL_cleanse (a compiler-barrier memset that is guaranteed not to be
 // optimized away). Embedded allows `final class` + `deinit`; a value `struct`
 // cannot run cleanup on drop under Embedded.
-import CCryptoBoringSSL
+import CP2PBoringSSL
 
 /// Owns secret key bytes and zeroizes them on deinit (crypto-impl.md §5.2).
 ///
@@ -27,7 +27,7 @@ public final class SecretBytes: @unchecked Sendable {
     deinit {
         bytes.withUnsafeMutableBufferPointer { buffer in
             if let base = buffer.baseAddress, buffer.count > 0 {
-                CCryptoBoringSSL_OPENSSL_cleanse(base, buffer.count)
+                CP2PBoringSSL_OPENSSL_cleanse(base, buffer.count)
             }
         }
     }

@@ -1,0 +1,4 @@
+module CP2PBoringSSLShims {
+    header "CCryptoBoringSSLShims.h"
+    export *
+}
