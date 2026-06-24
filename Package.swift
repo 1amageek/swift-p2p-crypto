@@ -47,7 +47,15 @@ let package = Package(
         // a consumer pulling both swift-p2p-crypto and swift-certificates sees one
         // coherent `swift-crypto` and the platform floor is whatever the consumer
         // graph resolves (no forced `.macOS(.v26)`).
-        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0"),
+        //
+        // The range MUST overlap the 4.x line: in the swift-libp2p graph this
+        // package is pulled transitively (via quic) alongside swift-tls and
+        // swift-webrtc, which both require `swift-crypto >= 4.2.0`. A `from: "3.0.0"`
+        // SemVer cap (`3.0.0 ..< 4.0.0`) is DISJOINT from `>= 4.2.0`, so the
+        // resolver fails. This range mirrors swift-quic's exact range so the whole
+        // graph agrees on one `swift-crypto`. The CryptoKit-style high-level APIs
+        // used by FoundationCryptoProvider are stable across 3.x -> 4.x.
+        .package(url: "https://github.com/apple/swift-crypto.git", "3.12.3"..<"5.0.0"),
     ],
     targets: [
         // ---- Umbrella: the single `DefaultCryptoProvider` resolution point ----
