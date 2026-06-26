@@ -18,6 +18,24 @@ let embeddedSettings: [SwiftSetting] = {
     return s
 }()
 
+// The vendored BoringSSL C targets are part of this package's release artifact.
+// Keeping them as local targets avoids a separate package identity while retaining
+// the CP2PBoringSSL module names and symbol prefix that prevent collisions with
+// apple/swift-crypto's BoringSSL.
+let boringSSLTargetExclude: [String] = [
+    "PrivacyInfo.xcprivacy",
+    "hash.txt",
+    "CMakeLists.txt",
+    "crypto/bio/connect.cc",
+    "crypto/bio/socket_helper.cc",
+    "crypto/bio/socket.cc",
+]
+
+let boringSSLShimsTargetExclude: [String] = [
+    "PrivacyInfo.xcprivacy",
+    "CMakeLists.txt",
+]
+
 let package = Package(
     name: "swift-p2p-crypto",
     platforms: [
@@ -33,14 +51,11 @@ let package = Package(
         .library(name: "P2PCryptoFoundation", targets: ["P2PCryptoFoundation"]),
     ],
     dependencies: [
-        .package(path: "../swift-p2p-core"),
-        // Vendored BoringSSL with a DISTINCT identity (`p2p-boringssl`) and
-        // renamed C targets (`CP2PBoringSSL` / `CP2PBoringSSLShims`, link symbols
-        // prefixed `CP2PBoringSSL_*`). Used ONLY by the Embedded provider for its
-        // C BoringSSL bindings (CBoringSSLForProbe). Its distinct identity and
-        // symbol prefix let it coexist with `apple/swift-crypto` in any consumer
-        // graph (no `swift-crypto` identity collision, no duplicate C symbols).
-        .package(path: "vendor/p2p-boringssl"),
+        .package(url: "https://github.com/1amageek/swift-p2p-core.git", from: "0.1.0"),
+        // Vendored BoringSSL is wired as local C targets below. Its C modules are
+        // renamed to `CP2PBoringSSL` / `CP2PBoringSSLShims` and its link symbols
+        // are prefixed `CP2PBoringSSL_*`, so it coexists with apple/swift-crypto
+        // without adding another release repository.
         // The host Foundation provider sources its high-level `Crypto` from the
         // canonical `apple/swift-crypto` (CryptoKit on Apple). This is the SAME
         // `swift-crypto` identity that swift-p2p-core / swift-certificates use, so
@@ -76,7 +91,8 @@ let package = Package(
             dependencies: [
                 .product(name: "P2PCoreCrypto",       package: "swift-p2p-core"),
                 .product(name: "P2PCoreBytes",        package: "swift-p2p-core"),
-                .product(name: "CBoringSSLForProbe",  package: "p2p-boringssl"),
+                "CP2PBoringSSL",
+                "CP2PBoringSSLShims",
             ],
             swiftSettings: embeddedSettings,
             // BoringSSL is C++ (.cc): the final embedder/host link pulls in the C++
@@ -97,6 +113,28 @@ let package = Package(
                 // guard for a Linux host build.
             ]
         ),
+        .target(
+            name: "CP2PBoringSSL",
+            path: "vendor/p2p-boringssl/Sources/CP2PBoringSSL",
+            exclude: boringSSLTargetExclude,
+            cSettings: [
+                .define("_HAS_EXCEPTIONS", to: "0", .when(platforms: [Platform.windows])),
+                .define("WIN32_LEAN_AND_MEAN", .when(platforms: [Platform.windows])),
+                .define("NOMINMAX", .when(platforms: [Platform.windows])),
+                .define("_CRT_SECURE_NO_WARNINGS", .when(platforms: [Platform.windows])),
+                .define(
+                    "OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED",
+                    .when(platforms: [Platform.wasi])
+                ),
+                .define("OPENSSL_NO_ASM", .when(platforms: [Platform.wasi])),
+            ]
+        ),
+        .target(
+            name: "CP2PBoringSSLShims",
+            dependencies: ["CP2PBoringSSL"],
+            path: "vendor/p2p-boringssl/Sources/CP2PBoringSSLShims",
+            exclude: boringSSLShimsTargetExclude
+        ),
         // ---- Tests (host-only) ----
         .testTarget(
             name: "P2PCryptoEmbeddedTests",
@@ -110,5 +148,6 @@ let package = Package(
             name: "CryptoEquivalenceTests",
             dependencies: ["P2PCryptoEmbedded", "P2PCryptoFoundation"]
         ),
-    ]
+    ],
+    cxxLanguageStandard: .cxx17
 )
