@@ -12,7 +12,11 @@ public struct BoringRandom: RandomSource {
         var out = [UInt8](repeating: 0, count: count)
         if count > 0 {
             out.withUnsafeMutableBufferPointer { op in
-                _ = CP2PBoringSSL_RAND_bytes(op.baseAddress, op.count)
+                // RAND_bytes returns 1 on success, 0 on failure. A CSPRNG failure is
+                // unrecoverable — returning the zero-initialized buffer would hand out
+                // predictable bytes for keys / serials (a silent fallback). Fail closed.
+                let rc = CP2PBoringSSL_RAND_bytes(op.baseAddress, op.count)
+                precondition(rc == 1, "BoringSSL RAND_bytes failed; refusing to return non-random bytes")
             }
         }
         return out
@@ -21,7 +25,8 @@ public struct BoringRandom: RandomSource {
     public func fill(_ buffer: inout [UInt8]) {
         if buffer.isEmpty { return }
         buffer.withUnsafeMutableBufferPointer { bp in
-            _ = CP2PBoringSSL_RAND_bytes(bp.baseAddress, bp.count)
+            let rc = CP2PBoringSSL_RAND_bytes(bp.baseAddress, bp.count)
+            precondition(rc == 1, "BoringSSL RAND_bytes failed; refusing to return non-random bytes")
         }
     }
 }
