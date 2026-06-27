@@ -9,10 +9,23 @@ enum Hex {
         out.reserveCapacity(chars.count / 2)
         var index = 0
         while index < chars.count {
-            out.append(UInt8(nibble(chars[index]) << 4 | nibble(chars[index + 1])))
+            let hi = nibble(chars[index])
+            let lo = nibble(chars[index + 1])
+            out.append(UInt8(hi << 4 | lo))
             index += 2
         }
         return out
+    }
+
+    static func encode(_ bytes: [UInt8]) -> String {
+        let digits = Array("0123456789abcdef")
+        var output: [Character] = []
+        output.reserveCapacity(bytes.count * 2)
+        for byte in bytes {
+            output.append(digits[Int(byte >> 4)])
+            output.append(digits[Int(byte & 0x0f)])
+        }
+        return String(output)
     }
 
     private static func nibble(_ c: Character) -> Int {
