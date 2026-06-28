@@ -2,6 +2,24 @@
   "originHash" : "ff98205d7d05edc6a1865ddf264b49ad1a9ff55451427f9e66b0e70820923f69",
   "pins" : [
     {
+      "identity" : "swift-asn1",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-asn1.git",
+      "state" : {
+        "revision" : "a9a5efd40eaf558a2bcd48d64b1d1646be686008",
+        "version" : "1.7.1"
+      }
+    },
+    {
+      "identity" : "swift-crypto",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-crypto.git",
+      "state" : {
+        "revision" : "1b6b2e274e85105bfa155183145a1dcfd63331f1",
+        "version" : "4.5.0"
+      }
+    },
+    {
       "identity" : "swift-p2p-core",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1amageek/swift-p2p-core.git",
