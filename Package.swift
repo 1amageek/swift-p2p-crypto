@@ -70,7 +70,7 @@ let cryptoLinkerSettings: [LinkerSetting] = includeBoringSSL
 
 let packageDependencies: [Package.Dependency] = {
     var dependencies: [Package.Dependency] = [
-        .package(url: "https://github.com/1amageek/swift-p2p-core.git", from: "0.1.0"),
+        .package(url: "https://github.com/1amageek/swift-p2p-core.git", from: "0.2.1"),
     ]
     if includeFoundationEssentials {
         dependencies += [

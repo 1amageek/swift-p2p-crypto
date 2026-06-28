@@ -6,7 +6,7 @@ backends — vendored BoringSSL for Embedded Swift, and Apple's swift-crypto /
 CryptoKit on the host — behind one umbrella that auto-selects per build,
 operating over the stack's `[UInt8]` / `Span<UInt8>` byte currency.
 
-> **Release status.** Not yet published (no git remote or tag). Consumed via local `path:` reference pending the first release (M8).
+> **Release status.** Current release: `0.1.1`.
 
 ## Requirements
 
@@ -15,14 +15,11 @@ operating over the stack's `[UInt8]` / `Span<UInt8>` byte currency.
 
 ## Installation
 
-This package has no released tag yet (first release is gated behind milestone
-M8). Depend on it via a local path:
+Add swift-p2p-crypto to your `Package.swift`:
 
 ```swift
-.package(path: "../swift-p2p-crypto")
+.package(url: "https://github.com/1amageek/swift-p2p-crypto.git", from: "0.1.1")
 ```
-
-No version or URL is published; do not pin a tag that does not exist.
 
 ## Products
 
@@ -67,7 +64,7 @@ collisions. Because BoringSSL is C++, BoringSSL builds link `libc++`.
 
 | Dependency | Reference | Used by |
 |---|---|---|
-| `swift-p2p-core` | local path `../swift-p2p-core` | both backends (`P2PCoreCrypto`, `P2PCoreBytes`) |
+| `swift-p2p-core` | `from: "0.2.1"` | both backends (`P2PCoreCrypto`, `P2PCoreBytes`) |
 | vendored BoringSSL | local C targets under `vendor/p2p-boringssl` | BoringSSL backend |
 | `swift-crypto` | `"3.12.3"..<"5.0.0"` | FoundationEssentials backend |
 

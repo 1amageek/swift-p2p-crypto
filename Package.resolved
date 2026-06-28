@@ -1,5 +1,5 @@
 {
-  "originHash" : "ff98205d7d05edc6a1865ddf264b49ad1a9ff55451427f9e66b0e70820923f69",
+  "originHash" : "efe2656f4231a6f007948d31cfefbc73c29199c3222099435122ee28a4e1de76",
   "pins" : [
     {
       "identity" : "swift-asn1",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/1amageek/swift-p2p-core.git",
       "state" : {
-        "revision" : "a13d353fad1430c829da85b979a7c1f66110b526",
-        "version" : "0.1.0"
+        "revision" : "52950d52a8c1beca3dbb0b892c2676ee1acad0c6",
+        "version" : "0.2.1"
       }
     }
   ],
