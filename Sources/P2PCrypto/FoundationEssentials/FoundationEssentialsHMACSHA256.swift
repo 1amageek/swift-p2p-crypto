@@ -3,10 +3,6 @@
 import P2PCoreCrypto
 #if canImport(FoundationEssentials)
 import FoundationEssentials
-#elseif canImport(Foundation)
-import Foundation
-#else
-#error("FoundationEssentials or Foundation is required for the host provider")
 #endif
 import Crypto
 
@@ -17,7 +13,7 @@ public struct FoundationEssentialsHMACSHA256: P2PCoreCrypto.MessageAuthenticatio
     private var hasher: HMAC<Crypto.SHA256>
 
     public init(key: Span<UInt8>) {
-        self.hasher = HMAC<Crypto.SHA256>(key: SymmetricKey(data: key.toData()))
+        self.hasher = HMAC<Crypto.SHA256>(key: SymmetricKey(data: key.toArray()))
     }
 
     public mutating func update(_ data: Span<UInt8>) {
@@ -31,12 +27,12 @@ public struct FoundationEssentialsHMACSHA256: P2PCoreCrypto.MessageAuthenticatio
 
     public static func authenticationCode(for message: Span<UInt8>, key: Span<UInt8>) -> [UInt8] {
         let code = HMAC<Crypto.SHA256>.authenticationCode(
-            for: message.toArray(), using: SymmetricKey(data: key.toData()))
+            for: message.toArray(), using: SymmetricKey(data: key.toArray()))
         return code.withUnsafeBytes { Array($0) }
     }
 
     public static func isValid(_ mac: Span<UInt8>, for message: Span<UInt8>, key: Span<UInt8>) -> Bool {
         HMAC<Crypto.SHA256>.isValidAuthenticationCode(
-            mac.toData(), authenticating: message.toArray(), using: SymmetricKey(data: key.toData()))
+            mac.toArray(), authenticating: message.toArray(), using: SymmetricKey(data: key.toArray()))
     }
 }

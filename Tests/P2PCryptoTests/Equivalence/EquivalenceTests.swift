@@ -12,8 +12,7 @@
 // are byte-compared.
 import Testing
 import P2PCoreCrypto
-@testable import P2PCryptoBoringSSL
-@testable import P2PCryptoFoundationEssentials
+@testable import P2PCrypto
 
 @Suite("Cross-provider equivalence")
 struct CryptoEquivalenceTests {

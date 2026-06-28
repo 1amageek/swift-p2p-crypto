@@ -3,7 +3,7 @@
 // provider.
 import Testing
 import P2PCoreCrypto
-@testable import P2PCryptoBoringSSL
+@testable import P2PCrypto
 
 @Suite("BoringSSL Hash KAT")
 struct BoringSSLHashTests {

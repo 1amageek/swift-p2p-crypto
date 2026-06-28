@@ -1,33 +1,30 @@
-// FoundationEssentialsX25519.swift
-// X25519 ECDH over swift-crypto. crypto-impl.md §4. Raw 32-byte encodings.
+// FoundationEssentialsP256Agreement.swift
+// P-256 ECDH over swift-crypto. crypto-impl.md §4. Private = raw scalar (32 B);
+// public = X9.62 uncompressed point (65 B, CryptoKit x963Representation).
 import P2PCoreCrypto
 #if canImport(FoundationEssentials)
 import FoundationEssentials
-#elseif canImport(Foundation)
-import Foundation
-#else
-#error("FoundationEssentials or Foundation is required for the host provider")
 #endif
 import Crypto
 
-/// X25519 key agreement. Conforms `P2PCoreCrypto.KeyAgreement`.
-public enum FoundationEssentialsX25519: KeyAgreement {
+/// P-256 ECDH key agreement. Conforms `P2PCoreCrypto.KeyAgreement`.
+public enum FoundationEssentialsP256Agreement: KeyAgreement {
     public struct PrivateKey: Sendable {
-        let key: Curve25519.KeyAgreement.PrivateKey
+        let key: P256.KeyAgreement.PrivateKey
     }
 
     public struct PublicKey: Sendable {
-        let key: Curve25519.KeyAgreement.PublicKey
+        let key: P256.KeyAgreement.PublicKey
     }
 
     public static func generatePrivateKey() throws(P2PCoreCrypto.CryptoError) -> PrivateKey {
-        PrivateKey(key: Curve25519.KeyAgreement.PrivateKey())
+        PrivateKey(key: P256.KeyAgreement.PrivateKey())
     }
 
     public static func privateKey(rawRepresentation: Span<UInt8>) throws(P2PCoreCrypto.CryptoError) -> PrivateKey {
         do {
-            return PrivateKey(key: try Curve25519.KeyAgreement.PrivateKey(
-                rawRepresentation: rawRepresentation.toData()))
+            return PrivateKey(key: try P256.KeyAgreement.PrivateKey(
+                rawRepresentation: rawRepresentation.toArray()))
         } catch {
             throw .invalidLength(expected: 32, actual: rawRepresentation.count)
         }
@@ -35,10 +32,10 @@ public enum FoundationEssentialsX25519: KeyAgreement {
 
     public static func publicKey(rawRepresentation: Span<UInt8>) throws(P2PCoreCrypto.CryptoError) -> PublicKey {
         do {
-            return PublicKey(key: try Curve25519.KeyAgreement.PublicKey(
-                rawRepresentation: rawRepresentation.toData()))
+            return PublicKey(key: try P256.KeyAgreement.PublicKey(
+                x963Representation: rawRepresentation.toArray()))
         } catch {
-            throw .invalidLength(expected: 32, actual: rawRepresentation.count)
+            throw .invalidLength(expected: 65, actual: rawRepresentation.count)
         }
     }
 
@@ -51,7 +48,7 @@ public enum FoundationEssentialsX25519: KeyAgreement {
     }
 
     public static func rawRepresentation(of publicKey: PublicKey) -> [UInt8] {
-        [UInt8](publicKey.key.rawRepresentation)
+        [UInt8](publicKey.key.x963Representation)
     }
 
     public static func sharedSecret(

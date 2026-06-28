@@ -1,9 +1,6 @@
 // SpanBytes.swift
 // Local helpers to move between the protocol's borrowed `Span<UInt8>` surface
-// and the owned `[UInt8]` buffers BoringSSL consumes. The C calls run inside
-// `withUnsafeBufferPointer`; we never throw from inside that closure (the typed
-// error is raised outside, sidestepping the rethrows/`any Error` erosion noted
-// in crypto-impl.md §5.1).
+// and owned `[UInt8]` buffers consumed by concrete backends.
 extension Span where Element == UInt8 {
     /// Copies the borrowed span into an owned array in one bulk copy (the only
     /// safe way to hand a span's bytes to a C call that may outlive the borrow

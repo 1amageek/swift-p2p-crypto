@@ -3,7 +3,7 @@
 // sign/verify KATs for the BoringSSL provider.
 import Testing
 import P2PCoreCrypto
-@testable import P2PCryptoBoringSSL
+@testable import P2PCrypto
 
 @Suite("BoringSSL X25519 KAT")
 struct BoringSSLX25519Tests {

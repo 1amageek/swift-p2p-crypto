@@ -3,7 +3,7 @@
 // Retry integrity tag, plus a CSPRNG non-repetition smoke test.
 import Testing
 import P2PCoreCrypto
-@testable import P2PCryptoBoringSSL
+@testable import P2PCrypto
 
 @Suite("BoringSSL QUIC RFC 9001 vectors")
 struct BoringSSLQUICVectorTests {

@@ -4,7 +4,7 @@
 // outputs the BoringSSL provider is pinned against.
 import Testing
 import P2PCoreCrypto
-@testable import P2PCryptoFoundationEssentials
+@testable import P2PCrypto
 
 @Suite("FoundationEssentials AEAD KAT")
 struct FoundationEssentialsAEADTests {

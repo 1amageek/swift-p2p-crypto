@@ -3,10 +3,13 @@
 import PackageDescription
 
 // Embedded toggle controls the experimental Embedded feature + WMO for the
-// P2PCryptoBoringSSL provider (BoringSSLCryptoProvider) and the P2PCrypto
-// umbrella. The FoundationEssentials host provider and all test targets are NEVER
-// built Embedded.
+// P2PCrypto umbrella. Embedded builds use the BoringSSL backend.
 let embeddedEnabled = Context.environment["P2P_CRYPTO_EMBEDDED"] == "1"
+let requestedBackend = Context.environment["P2P_CRYPTO_BACKEND"]
+let cryptoBackend = embeddedEnabled ? "boringssl" : (requestedBackend ?? "foundation")
+let includeBoringSSL = cryptoBackend == "boringssl" || cryptoBackend == "all"
+let includeFoundationEssentials = cryptoBackend == "foundation" || cryptoBackend == "all"
+let defaultUsesBoringSSL = cryptoBackend == "boringssl"
 
 // Lifetimes is enabled in BOTH modes because the protocol surface passes
 // Span<UInt8> in/out (P2PCoreCrypto enables it; matched here).
@@ -15,7 +18,66 @@ let embeddedSettings: [SwiftSetting] = {
     if embeddedEnabled {
         s += [.enableExperimentalFeature("Embedded"), .unsafeFlags(["-wmo"])]
     }
+    if defaultUsesBoringSSL {
+        s += [.define("P2P_CRYPTO_DEFAULT_BORINGSSL")]
+    }
     return s
+}()
+
+let cryptoDependencies: [Target.Dependency] = {
+    var dependencies: [Target.Dependency] = [
+        .product(name: "P2PCoreCrypto", package: "swift-p2p-core"),
+        .product(name: "P2PCoreBytes", package: "swift-p2p-core"),
+    ]
+    if includeBoringSSL {
+        dependencies += ["CP2PBoringSSL", "CP2PBoringSSLShims"]
+    }
+    if includeFoundationEssentials {
+        dependencies += [.product(name: "Crypto", package: "swift-crypto")]
+    }
+    return dependencies
+}()
+
+let cryptoSourceExcludes: [String] = {
+    switch (includeBoringSSL, includeFoundationEssentials) {
+    case (true, true):
+        return []
+    case (true, false):
+        return ["FoundationEssentials"]
+    case (false, true):
+        return ["BoringSSL"]
+    case (false, false):
+        return ["BoringSSL", "FoundationEssentials"]
+    }
+}()
+
+let cryptoTestExcludes: [String] = {
+    switch (includeBoringSSL, includeFoundationEssentials) {
+    case (true, true):
+        return []
+    case (true, false):
+        return ["FoundationEssentials", "Equivalence"]
+    case (false, true):
+        return ["BoringSSL", "Equivalence"]
+    case (false, false):
+        return ["BoringSSL", "FoundationEssentials", "Equivalence"]
+    }
+}()
+
+let cryptoLinkerSettings: [LinkerSetting] = includeBoringSSL
+    ? [.linkedLibrary("c++", .when(platforms: [.macOS, .iOS, .linux]))]
+    : []
+
+let packageDependencies: [Package.Dependency] = {
+    var dependencies: [Package.Dependency] = [
+        .package(url: "https://github.com/1amageek/swift-p2p-core.git", from: "0.1.0"),
+    ]
+    if includeFoundationEssentials {
+        dependencies += [
+            .package(url: "https://github.com/apple/swift-crypto.git", "3.12.3"..<"5.0.0"),
+        ]
+    }
+    return dependencies
 }()
 
 // The vendored BoringSSL C targets are part of this package's release artifact.
@@ -48,11 +110,21 @@ let package = Package(
         // FoundationEssentials host provider on host, the BoringSSL provider
         // under Embedded.
         .library(name: "P2PCrypto",           targets: ["P2PCrypto"]),
-        .library(name: "P2PCryptoBoringSSL",  targets: ["P2PCryptoBoringSSL"]),
-        .library(name: "P2PCryptoFoundationEssentials", targets: ["P2PCryptoFoundationEssentials"]),
     ],
-    dependencies: [
-        .package(url: "https://github.com/1amageek/swift-p2p-core.git", from: "0.1.0"),
+    dependencies: packageDependencies,
+    targets: [
+        // ---- Umbrella: the single `DefaultCryptoProvider` resolution point ----
+        // Build settings select which backend source set and dependencies are
+        // present. The public module name stays `P2PCrypto` in every mode.
+        .target(
+            name: "P2PCrypto",
+            dependencies: cryptoDependencies,
+            exclude: cryptoSourceExcludes,
+            swiftSettings: embeddedSettings,
+            // BoringSSL is C++ (.cc): the final embedder/host link pulls in the C++
+            // runtime. For the host test build this is `-lc++` (probe confirmed).
+            linkerSettings: cryptoLinkerSettings
+        ),
         // Vendored BoringSSL is wired as local C targets below. Its C modules are
         // renamed to `CP2PBoringSSL` / `CP2PBoringSSLShims` and its link symbols
         // are prefixed `CP2PBoringSSL_*`, so it coexists with apple/swift-crypto
@@ -72,50 +144,6 @@ let package = Package(
         // resolver fails. This range mirrors swift-quic's exact range so the whole
         // graph agrees on one `swift-crypto`. The CryptoKit-style high-level APIs
         // used by FoundationEssentialsCryptoProvider are stable across 3.x -> 4.x.
-        .package(url: "https://github.com/apple/swift-crypto.git", "3.12.3"..<"5.0.0"),
-    ],
-    targets: [
-        // ---- Umbrella: the single `DefaultCryptoProvider` resolution point ----
-        // Conditional dependency keeps the Embedded build free of the
-        // FoundationEssentials host provider: under P2P_CRYPTO_EMBEDDED=1 it
-        // depends ONLY on the BoringSSL provider; on host ONLY on the
-        // FoundationEssentials provider. The source matches this with
-        // `#if hasFeature(Embedded)`.
-        .target(
-            name: "P2PCrypto",
-            dependencies: embeddedEnabled
-                ? ["P2PCryptoBoringSSL"]
-                : ["P2PCryptoFoundationEssentials"],
-            swiftSettings: embeddedSettings
-        ),
-        // ---- Embedded-clean provider: thin Swift shim over vendored C BoringSSL ----
-        .target(
-            name: "P2PCryptoBoringSSL",
-            dependencies: [
-                .product(name: "P2PCoreCrypto",       package: "swift-p2p-core"),
-                .product(name: "P2PCoreBytes",        package: "swift-p2p-core"),
-                "CP2PBoringSSL",
-                "CP2PBoringSSLShims",
-            ],
-            swiftSettings: embeddedSettings,
-            // BoringSSL is C++ (.cc): the final embedder/host link pulls in the C++
-            // runtime. For the host test build this is `-lc++` (probe confirmed).
-            linkerSettings: [.linkedLibrary("c++", .when(platforms: [.macOS, .iOS, .linux]))]
-        ),
-        // ---- Host-only FoundationEssentials provider: swift-crypto / CryptoKit (+ _CryptoExtras) ----
-        .target(
-            name: "P2PCryptoFoundationEssentials",
-            dependencies: [
-                .product(name: "P2PCoreCrypto", package: "swift-p2p-core"),
-                .product(name: "P2PCoreBytes",  package: "swift-p2p-core"),
-                .product(name: "Crypto",        package: "swift-crypto"),
-                // _CryptoExtras (AES._CBC) is only the off-Apple AES header-protection
-                // fallback (crypto-impl.md §4). On Apple the host provider uses
-                // CommonCrypto AES-ECB, so _CryptoExtras is intentionally not a
-                // dependency here. It would be added with a `.when(platforms:)`
-                // guard for a Linux host build.
-            ]
-        ),
         .target(
             name: "CP2PBoringSSL",
             path: "vendor/p2p-boringssl/Sources/CP2PBoringSSL",
@@ -140,16 +168,9 @@ let package = Package(
         ),
         // ---- Tests (host-only) ----
         .testTarget(
-            name: "P2PCryptoBoringSSLTests",
-            dependencies: ["P2PCryptoBoringSSL"]
-        ),
-        .testTarget(
-            name: "P2PCryptoFoundationEssentialsTests",
-            dependencies: ["P2PCryptoFoundationEssentials"]
-        ),
-        .testTarget(
-            name: "CryptoEquivalenceTests",
-            dependencies: ["P2PCryptoBoringSSL", "P2PCryptoFoundationEssentials"]
+            name: "P2PCryptoTests",
+            dependencies: ["P2PCrypto"],
+            exclude: cryptoTestExcludes
         ),
     ],
     cxxLanguageStandard: .cxx17

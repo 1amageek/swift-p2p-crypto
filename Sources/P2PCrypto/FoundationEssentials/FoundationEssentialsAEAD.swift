@@ -6,10 +6,6 @@
 import P2PCoreCrypto
 #if canImport(FoundationEssentials)
 import FoundationEssentials
-#elseif canImport(Foundation)
-import Foundation
-#else
-#error("FoundationEssentials or Foundation is required for the host provider")
 #endif
 import Crypto
 
@@ -41,7 +37,7 @@ public struct FoundationEssentialsAEAD: AEAD {
             throw .invalidLength(expected: algorithm.keyLength, actual: key.count)
         }
         self.algorithm = algorithm
-        self.key = SymmetricKey(data: key.toData())
+        self.key = SymmetricKey(data: key.toArray())
     }
 
     public func seal(
@@ -52,9 +48,9 @@ public struct FoundationEssentialsAEAD: AEAD {
         guard nonce.count == Self.nonceLength else {
             throw .invalidLength(expected: Self.nonceLength, actual: nonce.count)
         }
-        let pt = plaintext.toData()
-        let nonceData = nonce.toData()
-        let aadData = aad.toData()
+        let pt = plaintext.toArray()
+        let nonceData = nonce.toArray()
+        let aadData = aad.toArray()
         switch algorithm {
         case .aes128gcm, .aes256gcm:
             do {
@@ -86,14 +82,12 @@ public struct FoundationEssentialsAEAD: AEAD {
         guard ciphertext.count >= Self.tagLength else {
             throw .invalidLength(expected: Self.tagLength, actual: ciphertext.count)
         }
-        // One bulk copy of the combined input; slice the Data view (no copy) into
-        // the ciphertext and tag CryptoKit needs — no [UInt8] round-trip.
-        let combined = ciphertext.toData()
-        let splitIndex = combined.startIndex + (combined.count - Self.tagLength)
-        let ctData = combined[combined.startIndex..<splitIndex]
-        let tagData = combined[splitIndex..<combined.endIndex]
-        let nonceData = nonce.toData()
-        let aadData = aad.toData()
+        let combined = ciphertext.toArray()
+        let splitIndex = combined.count - Self.tagLength
+        let ctData = combined[..<splitIndex]
+        let tagData = combined[splitIndex..<combined.count]
+        let nonceData = nonce.toArray()
+        let aadData = aad.toArray()
         switch algorithm {
         case .aes128gcm, .aes256gcm:
             do {
@@ -120,23 +114,16 @@ public struct FoundationEssentialsAEAD: AEAD {
         }
     }
 
-    /// Concatenates `ciphertext || tag` into one owned buffer with two bulk
-    /// copies, replacing `[UInt8](ciphertext) + [UInt8](tag)` (which allocated
-    /// two arrays and a third for the `+` result).
-    private static func combine(ciphertext: Data, tag: Data) -> [UInt8] {
-        let ctCount = ciphertext.count
-        let total = ctCount + tag.count
-        guard total > 0 else { return [] }
-        return [UInt8](unsafeUninitializedCapacity: total) { destination, initializedCount in
-            if ctCount > 0 {
-                _ = ciphertext.copyBytes(to: destination, count: ctCount)
-            }
-            if tag.count > 0 {
-                let tail = UnsafeMutableBufferPointer(rebasing: destination[ctCount...])
-                _ = tag.copyBytes(to: tail, count: tag.count)
-            }
-            initializedCount = total
-        }
+    /// Concatenates `ciphertext || tag` into one owned buffer.
+    private static func combine<Ciphertext: Collection, Tag: Collection>(
+        ciphertext: Ciphertext,
+        tag: Tag
+    ) -> [UInt8] where Ciphertext.Element == UInt8, Tag.Element == UInt8 {
+        var result: [UInt8] = []
+        result.reserveCapacity(ciphertext.count + tag.count)
+        result.append(contentsOf: ciphertext)
+        result.append(contentsOf: tag)
+        return result
     }
 
     private func mapOpenError(_ error: CryptoKitError) -> P2PCoreCrypto.CryptoError {

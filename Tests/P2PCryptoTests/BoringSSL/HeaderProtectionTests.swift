@@ -2,7 +2,7 @@
 // QUIC header-protection KATs (RFC 9001 Appendix A) for the BoringSSL provider.
 import Testing
 import P2PCoreCrypto
-@testable import P2PCryptoBoringSSL
+@testable import P2PCrypto
 
 @Suite("BoringSSL HeaderProtection KAT")
 struct BoringSSLHeaderProtectionTests {

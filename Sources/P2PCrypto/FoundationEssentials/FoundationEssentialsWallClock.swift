@@ -4,10 +4,13 @@
 // device-RTC-backed `WallClock`; this host default is the one used on macOS/iOS.
 #if canImport(FoundationEssentials)
 import FoundationEssentials
-#elseif canImport(Foundation)
-import Foundation
+#endif
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
 #else
-#error("FoundationEssentials or Foundation is required for the host provider")
+#error("A C time provider is required for FoundationEssentialsWallClock")
 #endif
 import P2PCoreCrypto
 
@@ -16,6 +19,6 @@ public struct FoundationEssentialsWallClock: WallClock {
     public init() {}
 
     public func nowUnixSeconds() -> Int64 {
-        Int64(Date().timeIntervalSince1970)
+        Int64(time(nil))
     }
 }

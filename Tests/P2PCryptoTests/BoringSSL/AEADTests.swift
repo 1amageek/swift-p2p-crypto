@@ -3,7 +3,7 @@
 // AES-GCM, and the mandatory auth-failure-throws negative test.
 import Testing
 import P2PCoreCrypto
-@testable import P2PCryptoBoringSSL
+@testable import P2PCrypto
 
 @Suite("BoringSSL AEAD KAT")
 struct BoringSSLAEADTests {
